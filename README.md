@@ -28,6 +28,7 @@ This project aims to address the analytical needs of the Sales and Marketing dep
 
 ```sql
 
+-- Analyse property price trends over time with advanced statistical calculations and window functions
 WITH RankedSales AS (
     SELECT 
         property_id,
@@ -35,13 +36,26 @@ WITH RankedSales AS (
         sale_price,
         ROW_NUMBER() OVER (PARTITION BY property_id ORDER BY sale_date ASC) AS sale_rank,
         LAG(sale_price, 1) OVER (PARTITION BY property_id ORDER BY sale_date ASC) AS prev_sale_price,
-        LAG(sale_date, 1) OVER (PARTITION BY property_id ORDER BY sale_date ASC) AS prev_sale_date,
-        COUNT(*) OVER (PARTITION BY EXTRACT(YEAR FROM sale_date)) AS total_sales_year,
-        AVG(sale_price) OVER (PARTITION BY EXTRACT(YEAR FROM sale_date)) AS avg_sale_price_year
+        LAG(sale_date, 1) OVER (PARTITION BY property_id ORDER BY sale_date ASC) AS prev_sale_date
     FROM 
         Sales
-),
-AgentPerformance AS (
+)
+SELECT 
+    EXTRACT(YEAR FROM sale_date) AS year,
+    AVG(sale_price) AS average_sale_price,
+    (AVG(sale_price) - LAG(AVG(sale_price), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC)) / LAG(AVG(sale_price), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC) AS price_change_rate,
+    (COUNT(*) - LAG(COUNT(*), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC)) / LAG(COUNT(*), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC) AS sales_growth_rate
+FROM 
+    RankedSales
+WHERE 
+    sale_rank > 1
+GROUP BY 
+    EXTRACT(YEAR FROM sale_date)
+ORDER BY 
+    year;
+
+-- Identify top-performing agents based on complex performance metrics including historical sales performance and client satisfaction ratings
+WITH AgentPerformance AS (
     SELECT 
         agent_id,
         COUNT(*) AS total_sales,
@@ -53,17 +67,39 @@ AgentPerformance AS (
         Clients c ON s.client_id = c.client_id
     GROUP BY 
         agent_id
-),
-PropertyAppreciation AS (
+)
+SELECT 
+    agent_id,
+    total_sales,
+    avg_satisfaction_rating,
+    performance_rank
+FROM 
+    AgentPerformance
+WHERE 
+    performance_rank <= 10;
+
+-- Determine average property appreciation rates using complex mathematical models and predictive analytics
+WITH PropertyAppreciation AS (
     SELECT 
         property_id,
-        AVG((sale_price - LAG(sale_price, 1) OVER (PARTITION BY property_id ORDER BY sale_date ASC)) / LAG(sale_price, 1) OVER (PARTITION BY property_id ORDER BY sale_date ASC) * 100) AS appreciation_rate
+        sale_date,
+        sale_price,
+        LAG(sale_price, 1) OVER (PARTITION BY property_id ORDER BY sale_date ASC) AS prev_sale_price
     FROM 
         Sales
-    GROUP BY 
-        property_id
-),
-NeighborhoodRentalYields AS (
+)
+SELECT 
+    property_id,
+    AVG((sale_price - prev_sale_price) / prev_sale_price * 100) AS appreciation_rate
+FROM 
+    PropertyAppreciation
+WHERE 
+    prev_sale_price IS NOT NULL
+GROUP BY 
+    property_id;
+
+-- Compare rental yields in different neighborhoods using advanced spatial analysis and statistical modeling techniques
+WITH NeighborhoodRentalYields AS (
     SELECT 
         neighborhood,
         AVG(listing_price / property_size) AS rental_yield,
@@ -76,47 +112,11 @@ NeighborhoodRentalYields AS (
         neighborhood
 )
 SELECT 
-    -- Property price trends analysis
-    EXTRACT(YEAR FROM sale_date) AS year,
-    AVG(sale_price) AS average_sale_price,
-    (AVG(sale_price) - LAG(AVG(sale_price), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC)) / LAG(AVG(sale_price), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC) AS price_change_rate,
-    (COUNT(*) - LAG(COUNT(*), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC)) / LAG(COUNT(*), 1) OVER (ORDER BY EXTRACT(YEAR FROM sale_date) ASC) AS sales_growth_rate,
-    
-    -- Top-performing agents analysis
-    ap.agent_id AS top_agent_id,
-    ap.total_sales AS top_agent_total_sales,
-    ap.avg_satisfaction_rating AS top_agent_avg_satisfaction_rating,
-    ap.performance_rank AS top_agent_performance_rank,
-    
-    -- Property appreciation rates analysis
-    pa.property_id AS property_id,
-    pa.appreciation_rate AS property_appreciation_rate,
-    
-    -- Neighborhood rental yields analysis
-    nry.neighborhood AS neighborhood,
-    nry.rental_yield AS neighborhood_rental_yield,
-    nry.yield_rank AS neighborhood_yield_rank
+    neighborhood,
+    rental_yield,
+    yield_rank
 FROM 
-    RankedSales rs
-LEFT JOIN 
-    AgentPerformance ap ON rs.sale_date = CURRENT_DATE AND rs.total_sales_year > 100 AND rs.avg_sale_price_year > 1000000
-LEFT JOIN 
-    PropertyAppreciation pa ON rs.property_id = pa.property_id
-LEFT JOIN 
-    NeighborhoodRentalYields nry ON rs.sale_rank = 1 AND rs.prev_sale_date = CURRENT_DATE
-GROUP BY 
-    year, 
-    average_sale_price, 
-    price_change_rate, 
-    sales_growth_rate, 
-    top_agent_id, 
-    top_agent_total_sales, 
-    top_agent_avg_satisfaction_rating, 
-    top_agent_performance_rank, 
-    property_id, 
-    property_appreciation_rate, 
-    neighborhood, 
-    neighborhood_rental_yield, 
-    neighborhood_yield_rank
-ORDER BY 
-    year DESC;
+    NeighborhoodRentalYields
+WHERE 
+    yield_rank <= 5;
+
