@@ -28,7 +28,7 @@ This project aims to address the analytical needs of the Sales and Marketing dep
 
 ```sql
 
--- Analyse property price trends over time with advanced statistical calculations and window functions
+-- Analyse property price trends over time
 WITH RankedSales AS (
     SELECT 
         property_id,
@@ -54,7 +54,7 @@ GROUP BY
 ORDER BY 
     year;
 
--- Identify top-performing agents based on complex performance metrics including historical sales performance and client satisfaction ratings
+-- Identify top-performing agents 
 WITH AgentPerformance AS (
     SELECT 
         agent_id,
@@ -78,7 +78,7 @@ FROM
 WHERE 
     performance_rank <= 10;
 
--- Determine average property appreciation rates using complex mathematical models and predictive analytics
+-- Determine average property appreciation rates 
 WITH PropertyAppreciation AS (
     SELECT 
         property_id,
@@ -98,7 +98,7 @@ WHERE
 GROUP BY 
     property_id;
 
--- Compare rental yields in different neighborhoods using advanced spatial analysis and statistical modeling techniques
+-- Compare rental yields in different neighborhoods 
 WITH NeighborhoodRentalYields AS (
     SELECT 
         neighborhood,
